@@ -165,12 +165,12 @@ private func installService(_ paths: ServicePaths) throws {
         fail("Existing files at the installation location are not marked as ours; leaving them untouched.")
     }
     try fm.createDirectory(at: paths.root, withIntermediateDirectories: true)
-    for name in ["hidpi", "hidpi-test", "hidpi-test-LICENSE.txt"] {
+    for name in ["hidpi", "hidpi-test", "hidpi-test-LICENSE.txt", "LICENSE", "THIRD_PARTY_NOTICES.md"] {
         let from = source.appendingPathComponent(name), to = paths.root.appendingPathComponent(name)
         if from.standardizedFileURL == to.standardizedFileURL { continue }
         let data = try Data(contentsOf: from)
         try data.write(to: to, options: .atomic)
-        if name != "hidpi-test-LICENSE.txt" { try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: to.path) }
+        if ["hidpi", "hidpi-test"].contains(name) { try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: to.path) }
     }
     try checkedWrite(["owner": serviceLabel, "version": 1], to: paths.marker)
     if !fm.fileExists(atPath: paths.agent.path) { try writeAgent(paths, mode: nil, enabled: false) }
@@ -260,7 +260,7 @@ private func uninstallService(_ paths: ServicePaths) throws {
     stopService(paths)
     let fm = FileManager.default
     if (try? fm.destinationOfSymbolicLink(atPath: paths.shortcut.path)) == paths.cli.path { try fm.removeItem(at: paths.shortcut) }
-    let owned = ["hidpi", "hidpi-test", "hidpi-test-LICENSE.txt", "verified.json", "mode.json", "service-status.json", "service.log", "installation.json", "management.lock"]
+    let owned = ["hidpi", "hidpi-test", "hidpi-test-LICENSE.txt", "LICENSE", "THIRD_PARTY_NOTICES.md", "verified.json", "mode.json", "service-status.json", "service.log", "installation.json", "management.lock"]
     for url in [paths.agent] + owned.map({ paths.root.appendingPathComponent($0) }) {
         if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
     }
@@ -307,6 +307,8 @@ func handleServiceCommand(_ arguments: [String] = Array(CommandLine.arguments.dr
             }
             try installService(paths)
             precondition(FileManager.default.isExecutableFile(atPath: paths.cli.path))
+            precondition(FileManager.default.fileExists(atPath: paths.root.appendingPathComponent("LICENSE").path))
+            precondition(FileManager.default.fileExists(atPath: paths.root.appendingPathComponent("THIRD_PARTY_NOTICES.md").path))
             precondition(plistObject(paths.agent)["RunAtLoad"] as? Bool == false)
             let key = verificationKey(uuid: mode.uuid, os: ProcessInfo.processInfo.operatingSystemVersionString, size: Size(width: mode.width, height: mode.height))
             try checkedWrite([key: Date().timeIntervalSince1970], to: paths.root.appendingPathComponent("verified.json"))
