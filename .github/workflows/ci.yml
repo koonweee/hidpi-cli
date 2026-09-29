@@ -1,0 +1,14 @@
+name: Build and test
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sh build.sh
+      - run: ./build/hidpi --self-test
+      - run: ./build/hidpi --service-self-test
+      - run: ./build/hidpi-test --self-test
+      - run: python3 tests/menu_pty.py
